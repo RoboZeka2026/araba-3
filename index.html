@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Çılgın Yarış - 3D Perspective Edition</title>
+    <title>Çılgın Yarış - Pro 3D Car Edition</title>
     <style>
         * {
             box-sizing: border-box;
@@ -21,7 +21,6 @@
             align-items: center;
             height: 100vh;
             overflow: hidden;
-            perspective: 800px; /* 3D Derinlik Efekti İçin */
         }
         #game-container {
             position: relative;
@@ -33,16 +32,13 @@
             border-right: 14px solid #1b5e20;
             box-shadow: 0 0 40px rgba(0,0,0,0.9);
             overflow: hidden;
-            transform-style: preserve-3d;
-            transform: rotateX(15deg) translateY(-20px); /* 3D Yol Görünümü */
-            transition: transform 0.3s;
+            perspective: 700px; /* Sadece alanın kendi derinliği */
         }
 
         .track {
             position: absolute;
             width: 100%;
-            height: 200%;
-            top: -50%;
+            height: 100%;
             background: repeating-linear-gradient(
                 0deg,
                 #282828,
@@ -50,7 +46,6 @@
                 #222222 40px,
                 #222222 80px
             );
-            transform-origin: center center;
         }
         .lane-line {
             position: absolute;
@@ -63,40 +58,46 @@
         .lane-1 { left: 33%; }
         .lane-2 { left: 66%; }
 
+        /* ARABALARI PRO 3D GÖRÜNÜME ÇEVİREN KISIM */
         .car {
             position: absolute;
-            width: 50px;
-            height: 90px;
-            border-radius: 12px;
-            box-shadow: 0 15px 30px rgba(0,0,0,0.8);
+            width: 52px;
+            height: 94px;
+            border-radius: 14px;
+            box-shadow: 0 15px 25px rgba(0,0,0,0.8), inset 0 3px 6px rgba(255,255,255,0.4);
             z-index: 5;
-            transform: rotateX(-15deg); /* Arabaları 3D sahneye uydurma */
+            transform-style: preserve-3d;
+            transform: rotateX(22deg) rotateY(0deg);
+            transition: transform 0.1s ease;
         }
+        /* Ön Cam (3D Etki) */
         .car::before {
             content: '';
             position: absolute;
-            top: 18px;
-            left: 5px;
+            top: 16px;
+            left: 6px;
             width: 40px;
-            height: 22px;
-            background: #111;
-            border-radius: 5px;
+            height: 24px;
+            background: linear-gradient(180deg, #111 0%, #333 100%);
+            border-radius: 6px;
+            border: 1px solid rgba(255,255,255,0.15);
         }
+        /* Arka Cam / Bagaj Detayı */
         .car::after {
             content: '';
             position: absolute;
             bottom: 12px;
             left: 6px;
-            width: 38px;
-            height: 12px;
+            width: 40px;
+            height: 14px;
             background: #111;
-            border-radius: 3px;
+            border-radius: 4px;
         }
 
         #player-car { cursor: grab; z-index: 10; }
         #player-car:active { cursor: grabbing; }
 
-        /* SKİNLER (BOzulmadı) */
+        /* SKİNLER (BOZULMADI) */
         .skin-red { background: linear-gradient(180deg, #ff1744 0%, #b71c1c 100%); border: 2px solid #ff5252; }
         .skin-neon { background: linear-gradient(180deg, #00e676 0%, #1b5e20 100%); border: 2px solid #69f0ae; box-shadow: 0 0 15px #00e676 !important; }
         .skin-gold { background: linear-gradient(180deg, #ffd700 0%, #ff8f00 100%); border: 2px solid #ffe57f; box-shadow: 0 0 15px #ffd700 !important; }
@@ -118,12 +119,13 @@
 
         .spoiler {
             position: absolute;
-            bottom: -5px;
+            bottom: -6px;
             left: 2px;
-            width: 46px;
+            width: 48px;
             height: 8px;
             background: #111;
             border-radius: 3px;
+            transform: translateZ(10px);
         }
 
         .explosion {
@@ -140,12 +142,11 @@
             color: #fff;
             font-size: 14px;
             text-shadow: 0 0 5px #000;
-            transform: rotateX(-15deg);
         }
         @keyframes explodeAnim {
-            0% { transform: scale(0.2) rotateX(-15deg); opacity: 1; }
-            50% { transform: scale(1.4) rotateX(-15deg); opacity: 0.9; }
-            100% { transform: scale(1.8) rotateX(-15deg); opacity: 0; }
+            0% { transform: scale(0.2); opacity: 1; }
+            50% { transform: scale(1.4); opacity: 0.9; }
+            100% { transform: scale(1.8); opacity: 0; }
         }
 
         #top-bar {
@@ -157,7 +158,6 @@
             justify-content: space-between;
             align-items: center;
             z-index: 20;
-            transform: rotateX(-15deg); /* HUD'ü düzelt */
         }
         .hud-box {
             color: #fff;
@@ -198,7 +198,6 @@
             text-align: center;
             padding: 20px;
             overflow-y: auto;
-            transform: rotateX(-15deg); /* Menüleri düzelt */
         }
         .hidden { display: none !important; }
 
@@ -274,7 +273,6 @@
             z-index: 99999; display: flex; flex-direction: column;
             justify-content: center; align-items: center; padding: 40px;
             box-sizing: border-box; text-align: left;
-            transform: none !important;
         }
     </style>
 </head>
@@ -643,6 +641,7 @@
         window.addEventListener('touchend', stopDrag);
     }
 
+    let lastX = 0;
     function drag(e) {
         if (!isDragging || !isPlaying || isPaused) return;
         e.preventDefault();
@@ -653,13 +652,22 @@
         let x = clientX - containerRect.left - offsetX;
         let y = clientY - containerRect.top - offsetY;
 
+        // Sola sağa hareket ederken hafif 3D yatma efekti (Dönüş hissi)
+        let deltaX = x - lastX;
+        let tilt = Math.max(-15, Math.min(15, deltaX * 1.5));
+        playerCar.style.transform = `rotateX(22deg) rotateY(${tilt}deg)`;
+        lastX = x;
+
         x = Math.max(0, Math.min(x, container.clientWidth - playerCar.offsetWidth));
         y = Math.max(0, Math.min(y, container.clientHeight - playerCar.offsetHeight));
 
         playerCar.style.left = x + 'px'; playerCar.style.top = y + 'px';
     }
 
-    function stopDrag() { isDragging = false; }
+    function stopDrag() { 
+        isDragging = false; 
+        playerCar.style.transform = `rotateX(22deg) rotateY(0deg)`;
+    }
 
     const carColors = ['linear-gradient(180deg, #29b6f6 0%, #0288d1 100%)', 'linear-gradient(180deg, #ab47bc 0%, #7b1fa2 100%)', 'linear-gradient(180deg, #ffee58 0%, #fbc02d 100%)'];
 
@@ -826,7 +834,7 @@
         settingsMenu.classList.add('hidden');
         if (cameFromPause) {
             cameFromPause = false;
-            pauseMenu.classList.remove('hidden');
+            pauseMenu.classList.add('hidden');
         } else {
             showMainMenu();
         }

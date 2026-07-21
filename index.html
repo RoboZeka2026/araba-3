@@ -32,7 +32,7 @@
             overflow: hidden;
         }
 
-        /* GERÇEKÇİ ASFALT YOL (Sadece Orta Kesik Şeritler, Kenar Çizgileri Kaldırıldı) */
+        /* GERÇEKÇİ ASFALT (Sadece Ortada Beyaz Kesik Çizgiler Var, Yan Çizgiler Tamamen Kaldırıldı) */
         .track {
             position: absolute;
             width: 100%;
@@ -48,13 +48,13 @@
                     #e0e0e0 40px,
                     #e0e0e0 80px
                 ),
-                /* Derin Mat Siyah Asfalt Doku */
-                radial-gradient(circle, #222222 0%, #121212 100%);
+                /* Derin Mat Siyah Yerine Doğal Gri-Antrasit Asfalt Dokusu */
+                linear-gradient(90deg, #2a2a2a 0%, #333333 50%, #2a2a2a 100%);
             background-size: 16px 100%, 100% 100%;
             background-position: center, center;
         }
 
-        /* Yaya Geçidi Katmanı (Nadiren ve Gerçekçi Görünüm) */
+        /* Nadir ve Gerçekçi Yaya Geçidi Katmanı */
         .crosswalk {
             position: absolute;
             width: 100%;
@@ -311,6 +311,7 @@
         .btn-code { background: linear-gradient(45deg, #29b6f6, #0288d1); border: 1px solid #80d8ff; }
         .btn-drift { background: linear-gradient(45deg, #8e2de2, #4a00e0); border: 1px solid #b388ff; }
 
+        /* Mobilde ve PC'de Garaj Kaydırma Düzeltmesi (touch-action eklendi) */
         .skin-list, .mission-list {
             width: 100%;
             max-width: 340px;
@@ -320,6 +321,8 @@
             margin: 12px 0;
             max-height: 280px;
             overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            touch-action: pan-y !important;
             padding-right: 5px;
         }
         .card {
@@ -363,10 +366,10 @@
         <button id="pause-btn" onclick="togglePause()">⏸</button>
     </div>
 
-    <div id="player-car" class="car skin-red"></div>
+    <div id="player-car" class="car skin-red" style="display: none;"></div>
 
-    <!-- Ana Menü -->
-    <div id="main-menu" class="overlay">
+    <!-- Ana Menü (Arka plan düz siyah yapıldı, yol ve arabalar kaldırıldı) -->
+    <div id="main-menu" class="overlay" style="background: #0d0d0d;">
         <h1>MAHALLE YARIŞI</h1>
         <p style="color:#ffd700; margin-bottom:10px; font-family:sans-serif;">🪙 Bakiyen: <span id="menu-coins">0</span></p>
 
@@ -389,7 +392,7 @@
         <button class="btn btn-secondary" onclick="showMainMenu()">GERİ</button>
     </div>
 
-    <!-- Mod Seçim Menüsü (Serbest Drift Modu Buraya Taşındı) -->
+    <!-- Mod Seçim Menüsü -->
     <div id="mode-menu" class="overlay hidden">
         <h1>MOD SEÇ</h1>
         <button class="btn" onclick="selectMode('easy')">MAHALLE TURU (KOLAY)</button>
@@ -815,7 +818,6 @@
             if (trackY >= 80) trackY = 0;
             document.getElementById('track').style.backgroundPositionY = trackY + 'px';
 
-            // Yaya Geçidini Seyrek Hale Getirdik (Arada bir uzun mesafelerle gelir)
             crosswalkY += baseSpeed + 2;
             if (crosswalkY > container.clientHeight + 200) {
                 crosswalkY = -800 - Math.random() * 600;
@@ -897,6 +899,7 @@
         hasCollided = false;
         applySkin(playerData.currentSkin);
 
+        playerCar.style.display = 'block'; // Oyuna başlayınca araba görünür olur
         playerCar.style.left = (container.clientWidth / 2 - 24) + 'px';
         playerCar.style.top = (container.clientHeight - 130) + 'px';
 
@@ -938,6 +941,7 @@
         document.querySelectorAll('.enemy-car').forEach(e => e.remove());
         if (activeChaser) { activeChaser.remove(); activeChaser = null; }
         if (activeSpeechBubble) { activeSpeechBubble.remove(); activeSpeechBubble = null; }
+        playerCar.style.display = 'none'; // Ana menüde araba gizlenir
 
         modeMenu.classList.add('hidden');
         garageMenu.classList.add('hidden');
@@ -1004,7 +1008,7 @@
     }
 
     updateHUD();
-    applySkin(playerData.currentSkin);
+    playerCar.style.display = 'none'; // Sayfa ilk açıldığında ana menüde araba görünmez
 </script>
 </body>
 </html>

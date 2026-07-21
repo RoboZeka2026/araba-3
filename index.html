@@ -27,7 +27,6 @@
             width: 100%;
             max-width: 440px;
             height: 100vh;
-            /* TÜM EKRANI KAPLAYAN MAHALLE YOLU (Eski üstten görünüm) */
             background: linear-gradient(180deg, #1e3d2f 0%, #111 100%);
             box-shadow: 0 0 40px rgba(0,0,0,0.9);
             overflow: hidden;
@@ -49,15 +48,6 @@
             border-left: 10px solid #2e7d32;
             border-right: 10px solid #2e7d32;
         }
-        .lane-line {
-            position: absolute;
-            width: 6px;
-            height: 50px;
-            background-color: #fff;
-            border-radius: 3px;
-        }
-        .lane-1 { left: 33%; }
-        .lane-2 { left: 66%; }
 
         /* GERÇEKÇİ 3B ÜSTTEN BAKARAK GÖRÜNEN ARABA */
         .car {
@@ -70,7 +60,6 @@
             transform-style: preserve-3d;
             transition: transform 0.08s ease;
         }
-        /* Ön Cam */
         .car::before {
             content: '';
             position: absolute;
@@ -82,7 +71,6 @@
             border-radius: 5px;
             border: 1px solid rgba(255,255,255,0.2);
         }
-        /* Arka Cam */
         .car::after {
             content: '';
             position: absolute;
@@ -97,24 +85,50 @@
         #player-car { cursor: grab; z-index: 10; }
         #player-car:active { cursor: grabbing; }
 
-        /* KÖPEK VEYA KOVALAYAN KARAKTER */
+        /* GERÇEKÇİ ARKADAN KOŞAN KÖPEK VEYA İNSAN (CSS Çizimi - Emoji Yok) */
         .chaser {
             position: absolute;
-            width: 36px;
-            height: 36px;
-            background: #ff5722;
-            border-radius: 50%;
-            border: 2px solid #fff;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.8);
+            width: 30px;
+            height: 40px;
             z-index: 8;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-size: 18px;
-            transition: top 0.05s linear, left 0.05s linear;
+            transform-style: preserve-3d;
         }
 
-        /* KONUŞMA BALONU (Kaza Anı) */
+        /* Köpek Stil */
+        .chaser.dog {
+            background: #b05725;
+            border-radius: 15px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.6);
+        }
+        .chaser.dog::before {
+            content: '';
+            position: absolute;
+            top: -6px;
+            left: 8px;
+            width: 14px;
+            height: 12px;
+            background: #b05725;
+            border-radius: 50%;
+        }
+
+        /* İnsan Stil */
+        .chaser.human {
+            background: #1976d2;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.6);
+        }
+        .chaser.human::before {
+            content: '';
+            position: absolute;
+            top: -8px;
+            left: 7px;
+            width: 16px;
+            height: 16px;
+            background: #ffccbc;
+            border-radius: 50%;
+        }
+
+        /* KONUŞMA BALONU (Tek Seferlik, Hakaret/Küfürlü Reaksiyon) */
         .speech-bubble {
             position: absolute;
             background: #ffffff;
@@ -478,23 +492,17 @@
         { id: 'skin-f1', name: '🏎️ F1 Speedster (Patlatıcı)', price: 1200, op: true }
     ];
 
-    const skinNamesMap = {
-        'skin-red': 'Kırmızı Fırtına',
-        'skin-neon': 'Neon Siber',
-        'skin-blue': 'Mavi Şimşek',
-        'skin-purple': 'Siber Mor',
-        'skin-gold': 'Altın Kaplama',
-        'skin-poison': 'Zehir Yeşil',
-        'skin-fire': 'Turuncu Alev',
-        'skin-cop': 'Polis Arabası',
-        'skin-camo': 'Gece Kamuflajı',
-        'skin-shadow': 'Gece Hayaleti',
-        'skin-diamond': 'Elmas Zırh',
-        'skin-lava': 'Lava Kaplama',
-        'skin-rgb': 'RGB Oyuncu',
-        'skin-tank': 'T-1000 TANK',
-        'skin-f1': 'F1 Speedster'
-    };
+    const insultList = [
+        "Önüne baksana kör herif!",
+        "Ehliyeti bakkaldan mı aldın?",
+        "Ayna kullanmayı bilmiyor musun!",
+        "Yolu baban mı kapattı?",
+        "Çek arabayı lan yoldan!",
+        "Sürüşünü seveyim senin!",
+        "Trafiğin içine ettin!",
+        "Gözlerini aç da sür!",
+        "Robotta bile daha çok akıl var!"
+    ];
 
     const promoCodes = {
         'EFSANE2026': { type: 'coin', value: 500 },
@@ -575,6 +583,7 @@
     let isDragging = false, offsetX = 0, offsetY = 0;
     let lastX = 0, currentDriftAngle = 0;
     let activeChaser = null;
+    let hasCollided = false; // Bug'ı önlemek için tek seferlik kilit kontrolü
 
     const songList = {
         song1: "https://cdn.pixabay.com/download/audio/2022/03/15/audio_c8c8a73229.mp3",
@@ -678,7 +687,6 @@
         let x = clientX - containerRect.left - offsetX;
         let y = clientY - containerRect.top - offsetY;
 
-        // Drift Açı Hesaplama
         let deltaX = x - lastX;
         currentDriftAngle = Math.max(-30, Math.min(30, deltaX * 2));
 
@@ -718,13 +726,12 @@
         enemy.className = 'car enemy-car';
         enemy.style.background = carColors[Math.floor(Math.random() * carColors.length)];
         
-        // TÜM EKRANDA SERBEST GEZEBİLMESİ İÇİN (Yol dışı dahil)
         enemy.style.left = Math.floor(Math.random() * (container.clientWidth - 50)) + 'px';
         enemy.style.top = '-110px';
         enemy.dataset.speed = (Math.random() * 2 + baseSpeed + (score / 200)).toFixed(1);
         container.appendChild(enemy);
 
-        // %10 İhtimalle Arkaya Köpek veya Kovalayan Biri Gelsin
+        // %10 İhtimalle Arkaya Gerçekçi Köpek veya İnsan Gelsin (Emoji Yok)
         if (!activeChaser && Math.random() < 0.10) {
             spawnChaser();
         }
@@ -732,15 +739,13 @@
 
     function spawnChaser() {
         const chaser = document.createElement('div');
-        chaser.className = 'chaser';
         const isDog = Math.random() < 0.5;
-        chaser.innerText = isDog ? '🐕' : '🏃‍♂️';
-        chaser.style.left = (container.clientWidth / 2 - 18) + 'px';
+        chaser.className = isDog ? 'chaser dog' : 'chaser human';
+        chaser.style.left = (container.clientWidth / 2 - 15) + 'px';
         chaser.style.top = (container.clientHeight + 50) + 'px';
         container.appendChild(chaser);
         activeChaser = chaser;
 
-        // 5 saniye sonra kovalamaca biter kaybolur
         setTimeout(() => {
             if (activeChaser === chaser) {
                 chaser.remove();
@@ -784,11 +789,10 @@
             const containerRect = container.getBoundingClientRect();
             const pBox = { left: playerRect.left + 6, right: playerRect.right - 6, top: playerRect.top + 6, bottom: playerRect.bottom - 6 };
 
-            // Kovalayan karakteri arabanın hemen arkasında tut
             if (activeChaser) {
                 let pLeft = parseFloat(playerCar.style.left) || 0;
                 let pTop = parseFloat(playerCar.style.top) || 0;
-                activeChaser.style.left = (pLeft + 6) + 'px';
+                activeChaser.style.left = (pLeft + 9) + 'px';
                 activeChaser.style.top = (pTop + 95) + 'px';
             }
 
@@ -796,7 +800,7 @@
                 let top = parseFloat(enemy.style.top) + parseFloat(enemy.dataset.speed);
                 enemy.style.top = top + 'px';
 
-                if (checkCollision(pBox, enemy.getBoundingClientRect())) {
+                if (!hasCollided && checkCollision(pBox, enemy.getBoundingClientRect())) {
                     if (playerData.currentSkin === 'skin-tank' || playerData.currentSkin === 'skin-f1') {
                         const enemyRect = enemy.getBoundingClientRect();
                         triggerExplosion(enemyRect.left - containerRect.left, enemyRect.top - containerRect.top);
@@ -806,10 +810,10 @@
                         runCoins += 5;
                         scoreDisplay.innerText = score;
                     } else {
-                        // KAZA ANI: Hangi arabayı sürüyorsa balonda yazsın
-                        const currentCarName = skinNamesMap[playerData.currentSkin] || 'Modifiye Araba';
+                        hasCollided = true; // Kilitleniyor, tekrar tekrar tetiklenip bug'a girmesini önler
+                        const randomInsult = insultList[Math.floor(Math.random() * insultList.length)];
                         const enemyRect = enemy.getBoundingClientRect();
-                        showSpeechBubble(enemyRect.left - containerRect.left - 20, enemyRect.top - containerRect.top - 40, `Şu an ${currentCarName} sürüyordum!`);
+                        showSpeechBubble(enemyRect.left - containerRect.left - 20, enemyRect.top - containerRect.top - 40, randomInsult);
                         
                         setTimeout(() => {
                             gameOver();
@@ -841,6 +845,7 @@
 
         document.querySelectorAll('.enemy-car').forEach(e => e.remove());
         if (activeChaser) { activeChaser.remove(); activeChaser = null; }
+        hasCollided = false; // Oyuna başlarken kilidi açıyoruz
         applySkin(playerData.currentSkin);
 
         playerCar.style.left = (container.clientWidth / 2 - 24) + 'px';
@@ -937,7 +942,7 @@
         if (songList[key]) {
             bgMusic.src = songList[key];
             if (isPlaying && !isPaused) {
-                bgMusic.prefPlay = bgMusic.play().catch(e => {});
+                bgMusic.play().catch(e => {});
             }
         }
     }

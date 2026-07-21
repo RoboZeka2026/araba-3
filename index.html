@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Çılgın Yarış - 3D Perspective Edition</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: none;
+            font-family: 'Impact', 'Segoe UI', sans-serif;
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            background: #080808;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+            perspective: 800px; /* 3D Derinlik Efekti İçin */
+        }
+        #game-container {
+            position: relative;
+            width: 100%;
+            max-width: 440px;
+            height: 100vh;
+            background: #222;
+            border-left: 14px solid #1b5e20;
+            border-right: 14px solid #1b5e20;
+            box-shadow: 0 0 40px rgba(0,0,0,0.9);
+            overflow: hidden;
+            transform-style: preserve-3d;
+            transform: rotateX(15deg) translateY(-20px); /* 3D Yol Görünümü */
+            transition: transform 0.3s;
+        }
+
+        .track {
+            position: absolute;
+            width: 100%;
+            height: 200%;
+            top: -50%;
+            background: repeating-linear-gradient(
+                0deg,
+                #282828,
+                #282828 40px,
+                #222222 40px,
+                #222222 80px
+            );
+            transform-origin: center center;
+        }
+        .lane-line {
+            position: absolute;
+            width: 8px;
+            height: 60px;
+            background-color: #fff;
+            border-radius: 4px;
+            box-shadow: 0 0 8px rgba(255,255,255,0.4);
+        }
+        .lane-1 { left: 33%; }
+        .lane-2 { left: 66%; }
+
+        .car {
+            position: absolute;
+            width: 50px;
+            height: 90px;
+            border-radius: 12px;
+            box-shadow: 0 15px 30px rgba(0,0,0,0.8);
+            z-index: 5;
+            transform: rotateX(-15deg); /* Arabaları 3D sahneye uydurma */
+        }
+        .car::before {
+            content: '';
+            position: absolute;
+            top: 18px;
+            left: 5px;
+            width: 40px;
+            height: 22px;
+            background: #111;
+            border-radius: 5px;
+        }
+        .car::after {
+            content: '';
+            position: absolute;
+            bottom: 12px;
+            left: 6px;
+            width: 38px;
+            height: 12px;
+            background: #111;
+            border-radius: 3px;
+        }
+
+        #player-car { cursor: grab; z-index: 10; }
+        #player-car:active { cursor: grabbing; }
+
+        /* SKİNLER (BOzulmadı) */
+        .skin-red { background: linear-gradient(180deg, #ff1744 0%, #b71c1c 100%); border: 2px solid #ff5252; }
+        .skin-neon { background: linear-gradient(180deg, #00e676 0%, #1b5e20 100%); border: 2px solid #69f0ae; box-shadow: 0 0 15px #00e676 !important; }
+        .skin-gold { background: linear-gradient(180deg, #ffd700 0%, #ff8f00 100%); border: 2px solid #ffe57f; box-shadow: 0 0 15px #ffd700 !important; }
+        .skin-shadow { background: linear-gradient(180deg, #37474f 0%, #212121 100%); border: 2px solid #78909c; }
+        .skin-tank { background: linear-gradient(180deg, #000 0%, #d50000 100%); border: 3px solid #ff1744; box-shadow: 0 0 20px #ff1744 !important; }
+        
+        .skin-blue { background: linear-gradient(180deg, #00d2ff 0%, #3a7bd5 100%); border: 2px solid #80d8ff; }
+        .skin-purple { background: linear-gradient(180deg, #8e2de2 0%, #4a00e0 100%); border: 2px solid #b388ff; }
+        .skin-poison { background: linear-gradient(180deg, #76b852 0%, #8dc26f 100%); border: 2px solid #ccff90; }
+        .skin-fire { background: linear-gradient(180deg, #ff4e50 0%, #f9d423 100%); border: 2px solid #ff6e40; }
+        .skin-cop { background: linear-gradient(180deg, #000 0%, #1a237e 100%); border: 2px solid #ff1744; box-shadow: 0 0 12px #29b6f6 !important; }
+        .skin-camo { background: linear-gradient(180deg, #4ac29a 0%, #bdfff3 100%); border: 2px solid #a7ffeb; }
+        .skin-diamond { background: linear-gradient(180deg, #e0eafc 0%, #cfdef3 100%); border: 2px solid #fff; box-shadow: 0 0 15px #fff !important; }
+        .skin-lava { background: linear-gradient(180deg, #f83600 0%, #fe8c00 100%); border: 2px solid #ffab40; }
+        .skin-rgb { background: linear-gradient(45deg, #ff0000, #00ff00, #0000ff); border: 2px solid #fff; animation: rgbAnim 2s infinite linear; }
+        .skin-f1 { background: linear-gradient(180deg, #000000 0%, #ffeb3b 100%); border: 3px solid #000; box-shadow: 0 0 25px #ffeb3b !important; }
+
+        @keyframes rgbAnim { 0% { filter: hue-rotate(0deg); } 100% { filter: hue-rotate(360deg); } }
+
+        .spoiler {
+            position: absolute;
+            bottom: -5px;
+            left: 2px;
+            width: 46px;
+            height: 8px;
+            background: #111;
+            border-radius: 3px;
+        }
+
+        .explosion {
+            position: absolute;
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            background: radial-gradient(circle, #ffff00 0%, #ff3d00 50%, rgba(255,0,0,0) 80%);
+            z-index: 50;
+            animation: explodeAnim 0.4s ease-out forwards;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #fff;
+            font-size: 14px;
+            text-shadow: 0 0 5px #000;
+            transform: rotateX(-15deg);
+        }
+        @keyframes explodeAnim {
+            0% { transform: scale(0.2) rotateX(-15deg); opacity: 1; }
+            50% { transform: scale(1.4) rotateX(-15deg); opacity: 0.9; }
+            100% { transform: scale(1.8) rotateX(-15deg); opacity: 0; }
+        }
+
+        #top-bar {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            right: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 20;
+            transform: rotateX(-15deg); /* HUD'ü düzelt */
+        }
+        .hud-box {
+            color: #fff;
+            font-size: 15px;
+            background: rgba(0, 0, 0, 0.85);
+            padding: 6px 12px;
+            border-radius: 20px;
+            border: 1px solid #ff1744;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .coin-txt { color: #ffd700; }
+        #pause-btn {
+            background: rgba(0, 0, 0, 0.8);
+            border: 2px solid #fff;
+            color: white;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            font-size: 16px;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.94);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            color: white;
+            text-align: center;
+            padding: 20px;
+            overflow-y: auto;
+            transform: rotateX(-15deg); /* Menüleri düzelt */
+        }
+        .hidden { display: none !important; }
+
+        h1 {
+            font-size: 32px;
+            margin-bottom: 5px;
+            color: #ff1744;
+            text-shadow: 0 0 15px rgba(255, 23, 68, 0.8);
+            font-style: italic;
+        }
+        .btn {
+            background: linear-gradient(45deg, #ff1744, #d50000);
+            color: white;
+            border: none;
+            padding: 10px 24px;
+            font-size: 15px;
+            border-radius: 25px;
+            margin: 5px;
+            cursor: pointer;
+            width: 210px;
+            transition: 0.2s;
+            box-shadow: 0 4px 12px rgba(255, 23, 68, 0.4);
+            letter-spacing: 1px;
+        }
+        .btn:hover { transform: scale(1.05); }
+        .btn-secondary { background: linear-gradient(45deg, #333, #111); box-shadow: none; border: 1px solid #555; }
+        .btn-danger { background: linear-gradient(45deg, #d32f2f, #8e0000); border: 1px solid #ff5252; }
+        .btn-code { background: linear-gradient(45deg, #29b6f6, #0288d1); border: 1px solid #80d8ff; }
+
+        .skin-list, .mission-list {
+            width: 100%;
+            max-width: 340px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin: 12px 0;
+            max-height: 280px;
+            overflow-y: auto;
+            padding-right: 5px;
+        }
+        .card {
+            background: #1e1e1e;
+            border: 1px solid #444;
+            border-radius: 12px;
+            padding: 8px 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .card-btn {
+            padding: 5px 12px;
+            font-size: 12px;
+            border-radius: 15px;
+            border: none;
+            cursor: pointer;
+            color: white;
+            font-weight: bold;
+        }
+        .btn-buy { background: #ffd700; color: #000; }
+        .btn-use { background: #00e676; color: #000; }
+        .btn-active { background: #555; color: #aaa; cursor: default; }
+
+        .select-group { margin: 8px 0; text-align: left; width: 80%; }
+        select, input[type=text], input[type=range] {
+            width: 100%; padding: 8px; background: #222; color: #fff;
+            border: 1px solid #ff1744; border-radius: 8px; text-align: center;
+        }
+
+        #error-overlay {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: #0000aa; color: #ffffff;
+            font-family: 'Courier New', Courier, monospace;
+            z-index: 99999; display: flex; flex-direction: column;
+            justify-content: center; align-items: center; padding: 40px;
+            box-sizing: border-box; text-align: left;
+            transform: none !important;
+        }
+    </style>
+</head>
+<body onclick="enableFullScreen()">
+
+<div id="game-container">
+    <div class="track" id="track"></div>
+
+    <div id="top-bar">
+        <div class="hud-box">SKOR: <span id="score">0</span></div>
+        <div class="hud-box coin-txt">🪙 <span id="coins">0</span></div>
+        <button id="pause-btn" onclick="togglePause()">⏸</button>
+    </div>
+
+    <div id="player-car" class="car skin-red"><div class="spoiler"></div></div>
+
+    <!-- Ana Menü -->
+    <div id="main-menu" class="overlay">
+        <h1>ÇILGIN YARIŞ</h1>
+        <p style="color:#ffd700; margin-bottom:10px; font-family:sans-serif;">🪙 Bakiyen: <span id="menu-coins">0</span></p>
+
+        <button class="btn" onclick="openModeSelect()">OYUNA BAŞLA</button>
+        <button class="btn btn-secondary" onclick="openGarage()">🏎️ GARAJ (SKINLER)</button>
+        <button class="btn btn-secondary" onclick="openMissions()">🎯 GÖREVLER</button>
+        <button class="btn btn-code" onclick="openCodeMenu()">🎁 PROMO KOD GİR</button>
+        <button class="btn btn-secondary" onclick="openSettings()">⚙️ AYARLAR</button>
+        <button class="btn btn-danger" onclick="exitGame()">🚪 OYUNDAN ÇIK</button>
+    </div>
+
+    <!-- Promo Kod Menüsü -->
+    <div id="code-menu" class="overlay hidden">
+        <h1>PROMO KOD</h1>
+        <p style="font-family:sans-serif; color:#ccc; font-size:13px;">Hediye kodunu girerek altın veya özel skinler kazan!</p>
+        <div style="width: 80%; margin: 15px 0;">
+            <input type="text" id="promo-input" placeholder="KODU BURAYA YAZ..." style="text-transform: uppercase;">
+        </div>
+        <button class="btn btn-code" onclick="redeemCode()">KODU KULLAN</button>
+        <button class="btn btn-secondary" onclick="showMainMenu()">GERİ</button>
+    </div>
+
+    <!-- Mod Seçim Menüsü -->
+    <div id="mode-menu" class="overlay hidden">
+        <h1>MOD SEÇ</h1>
+        <button class="btn" onclick="selectMode('easy')">SONSUZ OTOBAN (KOLAY)</button>
+        <button class="btn" onclick="selectMode('normal')">KLASİK MOD (NORMAL)</button>
+        <button class="btn" onclick="selectMode('hard')">ÇILGIN TRAFİK (ZOR)</button>
+        <button class="btn btn-secondary" onclick="showMainMenu()">GERİ</button>
+    </div>
+
+    <!-- Garaj Menüsü -->
+    <div id="garage-menu" class="overlay hidden">
+        <h1>GARAJ</h1>
+        <p style="color:#ffd700; font-family:sans-serif;">🪙 Bakiyen: <span id="garage-coins">0</span></p>
+        <div class="skin-list" id="skin-container"></div>
+        <button class="btn btn-secondary" onclick="showMainMenu()">GERİ</button>
+    </div>
+
+    <!-- Görevler Menüsü -->
+    <div id="missions-menu" class="overlay hidden">
+        <h1>GÖREVLER</h1>
+        <div class="mission-list" id="mission-container"></div>
+        <button class="btn btn-secondary" onclick="showMainMenu()">GERİ</button>
+    </div>
+
+    <!-- Ayarlar Menüsü -->
+    <div id="settings-menu" class="overlay hidden">
+        <h1>AYARLAR</h1>
+
+        <div class="select-group">
+            <label style="color:#aaa; font-family:sans-serif;">Müzik Seçimi</label>
+            <select id="song-select" onchange="changeSong(this.value)">
+                <option value="song1">⚡ Fast Rap Beat</option>
+                <option value="song2">💥 Oldschool BoomBap</option>
+                <option value="song3">🌙 Deep Trap Beat</option>
+                <option value="song4">🏎️ Cyberpunk Drive</option>
+                <option value="song5">🔥 Dark Phonk Beat</option>
+                <option value="song6">⚡ Synthwave Retro</option>
+                <option value="song7">🎧 Underground Drill</option>
+                <option value="song8">🌌 Chill Night Ride</option>
+            </select>
+        </div>
+
+        <div class="select-group">
+            <label style="color:#aaa; font-family:sans-serif;">Ses Seviyesi</label>
+            <input type="range" id="volume" min="0" max="100" value="50" oninput="updateVolume(this.value)">
+        </div>
+
+        <button class="btn" onclick="closeSettings()">KAYDET VE ÇIK</button>
+    </div>
+
+    <!-- Pause Menüsü -->
+    <div id="pause-menu" class="overlay hidden">
+        <h1>DURDURULDU</h1>
+        <button class="btn" onclick="togglePause()">DEVAM ET</button>
+        <button class="btn btn-secondary" onclick="openSettingsFromPause()">AYARLAR</button>
+        <button class="btn btn-secondary" onclick="showMainMenu()">ANA MENÜ</button>
+    </div>
+
+    <!-- Game Over Menüsü -->
+    <div id="game-over-menu" class="overlay hidden">
+        <h1 style="color: #ff1744;">KAZA YAPTIN!</h1>
+        <p style="font-size: 18px; font-family:sans-serif;">Skorun: <span id="final-score">0</span></p>
+        <p style="font-size: 16px; color:#ffd700; font-family:sans-serif; margin-bottom: 15px;">Kazanılan Coin: +<span id="earned-coins">0</span></p>
+        <button class="btn" onclick="startGame()">TEKRAR DENE</button>
+        <button class="btn btn-secondary" onclick="showMainMenu()">ANA MENÜ</button>
+    </div>
+</div>
+
+<div id="error-overlay" class="hidden">
+    <h2 style="color:#ff3333; font-size:24px;">*** FATAL SYSTEM ERROR ***</h2>
+    <p>A critical exception F2_KEY_TRIGGERED has occurred at 0x0040F220.</p>
+    <p>System memory dumped. Game thread terminated immediately.</p>
+    <br>
+    <p>* Press any key to restart game environment.</p>
+    <p>* System auto-rebooting in <span id="error-timer">5</span> seconds...</p>
+</div>
+
+<audio id="bg-music" loop></audio>
+
+<script>
+    function enableFullScreen() {
+        let elem = document.documentElement;
+        if (!document.fullscreenElement) {
+            if (elem.requestFullscreen) { elem.requestFullscreen(); }
+            else if (elem.webkitRequestFullscreen) { elem.webkitRequestFullscreen(); }
+        }
+    }
+
+    window.addEventListener('keydown', function(e) {
+        if (e.key === 'F2') {
+            e.preventDefault();
+            triggerCustomError();
+        }
+    });
+
+    function triggerCustomError() {
+        const errorView = document.getElementById('error-overlay');
+        errorView.classList.remove('hidden');
+        bgMusic.pause();
+        let countdown = 5;
+        const timerTxt = document.getElementById('error-timer');
+        const interval = setInterval(() => {
+            countdown--;
+            timerTxt.innerText = countdown;
+            if (countdown <= 0) { clearInterval(interval); location.reload(); }
+        }, 1000);
+    }
+
+    let playerData = JSON.parse(localStorage.getItem('raceGameData')) || {
+        coins: 0,
+        currentSkin: 'skin-red',
+        ownedSkins: ['skin-red'],
+        playTimeSeconds: 0,
+        highScore: 0,
+        completedMissions: [],
+        usedCodes: []
+    };
+
+    function saveData() {
+        localStorage.setItem('raceGameData', JSON.stringify(playerData));
+        updateHUD();
+    }
+
+    function updateHUD() {
+        document.getElementById('coins').innerText = playerData.coins;
+        document.getElementById('menu-coins').innerText = playerData.coins;
+        document.getElementById('garage-coins').innerText = playerData.coins;
+    }
+
+    const skins = [
+        { id: 'skin-red', name: 'Kırmızı Fırtına', price: 0, op: false },
+        { id: 'skin-neon', name: 'Neon Siber', price: 100, op: false },
+        { id: 'skin-blue', name: '⚡ Mavi Şimşek', price: 150, op: false },
+        { id: 'skin-purple', name: '🔮 Siber Mor', price: 200, op: false },
+        { id: 'skin-gold', name: 'Altın Kaplama', price: 250, op: false },
+        { id: 'skin-poison', name: '🧪 Zehir Yeşil', price: 300, op: false },
+        { id: 'skin-fire', name: '🔥 Turuncu Alev', price: 350, op: false },
+        { id: 'skin-cop', name: '🚨 Polis Arabası', price: 400, op: false },
+        { id: 'skin-camo', name: '🌌 Gece Kamuflajı', price: 450, op: false },
+        { id: 'skin-shadow', name: 'Gece Hayaleti', price: 500, op: false },
+        { id: 'skin-diamond', name: '💎 Elmas Zırh', price: 600, op: false },
+        { id: 'skin-lava', name: '☄️ Lava Kaplama', price: 700, op: false },
+        { id: 'skin-rgb', name: '🌈 RGB Oyuncu', price: 850, op: false },
+        { id: 'skin-tank', name: '💥 T-1000 TANK (Patlatıcı)', price: 1000, op: true },
+        { id: 'skin-f1', name: '🏎️ F1 Speedster (Patlatıcı)', price: 1200, op: true }
+    ];
+
+    const promoCodes = {
+        'EFSANE2026': { type: 'coin', value: 500 },
+        'TANKMOD': { type: 'coin', value: 1000 },
+        'BELESKOD': { type: 'coin', value: 250 },
+        'FORMULA1': { type: 'skin', value: 'skin-f1' }
+    };
+
+    function openCodeMenu() {
+        mainMenu.classList.add('hidden');
+        document.getElementById('code-menu').classList.remove('hidden');
+    }
+
+    function redeemCode() {
+        const input = document.getElementById('promo-input').value.trim().toUpperCase();
+        if (!input) return alert("Lütfen bir kod gir kanka!");
+        
+        if (playerData.usedCodes && playerData.usedCodes.includes(input)) {
+            return alert("Bu kodu zaten daha önce kullandın!");
+        }
+
+        if (promoCodes[input]) {
+            const reward = promoCodes[input];
+            if (!playerData.usedCodes) playerData.usedCodes = [];
+            playerData.usedCodes.push(input);
+
+            if (reward.type === 'coin') {
+                playerData.coins += reward.value;
+                alert(`Tebrikler! ${reward.value} Coin kazandın! 🪙`);
+            } else if (reward.type === 'skin') {
+                if (!playerData.ownedSkins.includes(reward.value)) {
+                    playerData.ownedSkins.push(reward.value);
+                    alert(`EFSANE! Özel F1 Speedster Arabasını Ücretsiz Açtın! 🏎️`);
+                } else {
+                    alert(`Bu skin zaten sende var, ekstra 500 Coin eklendi!`);
+                    playerData.coins += 500;
+                }
+            }
+            saveData();
+            document.getElementById('promo-input').value = '';
+            showMainMenu();
+        } else {
+            alert("Geçersiz veya hatalı bir kod girdin!");
+        }
+    }
+
+    const missions = [
+        { id: 'm1', title: 'Acemi Sürücü', desc: '100 Skor Yap', reward: 50, check: () => playerData.highScore >= 100 },
+        { id: 'm2', title: 'Usta Pilot', desc: '250 Skor Yap', reward: 100, check: () => playerData.highScore >= 250 },
+        { id: 'm3', title: 'Hız Tutkunu', desc: '500 Skor Yap', reward: 250, check: () => playerData.highScore >= 500 },
+        { id: 'm4', title: 'Pistlerin Kralı', desc: '1000 Skor Yap', reward: 500, check: () => playerData.highScore >= 1000 },
+        { id: 'm5', title: 'Isınma Turu', desc: 'Oyunu 1 Dk Oyna', reward: 50, check: () => playerData.playTimeSeconds >= 60 },
+        { id: 'm6', title: 'Sokak Yarışçısı', desc: 'Oyunu 3 Dk Oyna', reward: 150, check: () => playerData.playTimeSeconds >= 180 },
+        { id: 'm7', title: 'Yol Canavarı', desc: 'Oyunu 5 Dk Oyna', reward: 300, check: () => playerData.playTimeSeconds >= 300 },
+        { id: 'm8', title: 'Efsanevi Sürücü', desc: 'Oyunu 10 Dk Oyna', reward: 600, check: () => playerData.playTimeSeconds >= 600 }
+    ];
+
+    const container = document.getElementById('game-container');
+    const playerCar = document.getElementById('player-car');
+    const scoreDisplay = document.getElementById('score');
+    const finalScoreDisplay = document.getElementById('final-score');
+    const earnedCoinsDisplay = document.getElementById('earned-coins');
+    
+    const mainMenu = document.getElementById('main-menu');
+    const modeMenu = document.getElementById('mode-menu');
+    const garageMenu = document.getElementById('garage-menu');
+    const missionsMenu = document.getElementById('missions-menu');
+    const settingsMenu = document.getElementById('settings-menu');
+    const pauseMenu = document.getElementById('pause-menu');
+    const gameOverMenu = document.getElementById('game-over-menu');
+    const bgMusic = document.getElementById('bg-music');
+
+    let score = 0, runCoins = 0;
+    let isPlaying = false, isPaused = false;
+    let animationFrameId, spawnIntervalId, timerIntervalId;
+    let cameFromPause = false;
+    let baseSpeed = 4, spawnRate = 1100;
+    let isDragging = false, offsetX = 0, offsetY = 0;
+
+    const songList = {
+        song1: "https://cdn.pixabay.com/download/audio/2022/03/15/audio_c8c8a73229.mp3",
+        song2: "https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3",
+        song3: "https://cdn.pixabay.com/download/audio/2022/11/06/audio_c7987cb9e3.mp3",
+        song4: "https://cdn.pixabay.com/download/audio/2022/01/18/audio_d0a13f69d2.mp3",
+        song5: "https://cdn.pixabay.com/download/audio/2022/10/14/audio_9939f1c73a.mp3",
+        song6: "https://cdn.pixabay.com/download/audio/2022/03/10/audio_c330f983a8.mp3",
+        song7: "https://cdn.pixabay.com/download/audio/2023/04/18/audio_338c22bbcf.mp3",
+        song8: "https://cdn.pixabay.com/download/audio/2021/09/06/audio_8347f3b610.mp3"
+    };
+
+    bgMusic.src = songList.song1;
+    bgMusic.volume = 0.5;
+
+    function applySkin(skinId) { playerCar.className = 'car ' + skinId; }
+
+    function exitGame() {
+        if (confirm("Oyundan çıkmak istediğine emin misin kanka?")) {
+            window.close();
+            document.body.innerHTML = "<h1 style='color:white; text-align:center; margin-top:20%'>OYUN KAPATILDI. SEKMEYİ KAPATABİLİRSİN.</h1>";
+        }
+    }
+
+    function openGarage() {
+        mainMenu.classList.add('hidden');
+        garageMenu.classList.remove('hidden');
+        const list = document.getElementById('skin-container');
+        list.innerHTML = '';
+        skins.forEach(s => {
+            const isOwned = playerData.ownedSkins.includes(s.id);
+            const isActive = playerData.currentSkin === s.id;
+            let btnHTML = isActive ? `<button class="card-btn btn-active">SEÇİLİ</button>` :
+                          isOwned ? `<button class="card-btn btn-use" onclick="selectSkin('${s.id}')">KULLAN</button>` :
+                          `<button class="card-btn btn-buy" onclick="buySkin('${s.id}', ${s.price})">${s.price} 🪙</button>`;
+
+            list.innerHTML += `<div class="card"><span style="font-family:sans-serif; font-size:13px;">${s.name}</span>${btnHTML}</div>`;
+        });
+    }
+
+    function buySkin(id, price) {
+        if (playerData.coins >= price) {
+            playerData.coins -= price;
+            playerData.ownedSkins.push(id);
+            playerData.currentSkin = id;
+            saveData(); applySkin(id); openGarage();
+        } else alert('Yetersiz Coin!');
+    }
+
+    function selectSkin(id) {
+        playerData.currentSkin = id;
+        saveData(); applySkin(id); openGarage();
+    }
+
+    function openMissions() {
+        mainMenu.classList.add('hidden');
+        missionsMenu.classList.remove('hidden');
+        const list = document.getElementById('mission-container');
+        list.innerHTML = '';
+        missions.forEach(m => {
+            const isDone = playerData.completedMissions.includes(m.id);
+            const canClaim = m.check() && !isDone;
+            let btnHTML = isDone ? `<button class="card-btn btn-active">ALINDI</button>` :
+                          canClaim ? `<button class="card-btn btn-use" onclick="claimMission('${m.id}', ${m.reward})">AL (+${m.reward} 🪙)</button>` :
+                          `<button class="card-btn btn-active">KİLİTLİ</button>`;
+
+            list.innerHTML += `<div class="card"><div style="text-align:left; font-family:sans-serif;"><div style="font-weight:bold;">${m.title}</div><div style="font-size:11px; color:#aaa;">${m.desc}</div></div>${btnHTML}</div>`;
+        });
+    }
+
+    function claimMission(id, reward) {
+        playerData.coins += reward;
+        playerData.completedMissions.push(id);
+        saveData(); openMissions();
+    }
+
+    const lines = [];
+    for (let lane = 1; lane <= 2; lane++) {
+        for (let i = 0; i < 6; i++) {
+            const line = document.createElement('div');
+            line.className = `lane-line lane-${lane}`;
+            line.style.top = (i * 120) + 'px';
+            container.appendChild(line);
+            lines.push(line);
+        }
+    }
+
+    playerCar.addEventListener('mousedown', startDrag);
+    playerCar.addEventListener('touchstart', startDrag, { passive: false });
+
+    function startDrag(e) {
+        if (!isPlaying || isPaused) return;
+        e.preventDefault(); isDragging = true;
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        const rect = playerCar.getBoundingClientRect();
+        offsetX = clientX - rect.left; offsetY = clientY - rect.top;
+
+        window.addEventListener('mousemove', drag);
+        window.addEventListener('touchmove', drag, { passive: false });
+        window.addEventListener('mouseup', stopDrag);
+        window.addEventListener('touchend', stopDrag);
+    }
+
+    function drag(e) {
+        if (!isDragging || !isPlaying || isPaused) return;
+        e.preventDefault();
+        const containerRect = container.getBoundingClientRect();
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+        let x = clientX - containerRect.left - offsetX;
+        let y = clientY - containerRect.top - offsetY;
+
+        x = Math.max(0, Math.min(x, container.clientWidth - playerCar.offsetWidth));
+        y = Math.max(0, Math.min(y, container.clientHeight - playerCar.offsetHeight));
+
+        playerCar.style.left = x + 'px'; playerCar.style.top = y + 'px';
+    }
+
+    function stopDrag() { isDragging = false; }
+
+    const carColors = ['linear-gradient(180deg, #29b6f6 0%, #0288d1 100%)', 'linear-gradient(180deg, #ab47bc 0%, #7b1fa2 100%)', 'linear-gradient(180deg, #ffee58 0%, #fbc02d 100%)'];
+
+    function spawnEnemyCar() {
+        if (!isPlaying || isPaused) return;
+        const enemy = document.createElement('div');
+        enemy.className = 'car enemy-car';
+        enemy.style.background = carColors[Math.floor(Math.random() * carColors.length)];
+        enemy.style.left = Math.floor(Math.random() * (container.clientWidth - 50)) + 'px';
+        enemy.style.top = '-110px';
+        enemy.dataset.speed = (Math.random() * 2 + baseSpeed + (score / 200)).toFixed(1);
+        container.appendChild(enemy);
+    }
+
+    function checkCollision(r1, r2) {
+        return !(r1.top > r2.bottom || r1.bottom < r2.top || r1.right < r2.left || r1.left > r2.right);
+    }
+
+    function triggerExplosion(x, y) {
+        const exp = document.createElement('div');
+        exp.className = 'explosion';
+        exp.style.left = (x - 10) + 'px';
+        exp.style.top = (y - 10) + 'px';
+        exp.innerText = "BOOM!";
+        container.appendChild(exp);
+        setTimeout(() => exp.remove(), 400);
+    }
+
+    function gameLoop() {
+        if (isPlaying && !isPaused) {
+            lines.forEach(line => {
+                let top = parseFloat(line.style.top) + baseSpeed + 3;
+                if (top > container.clientHeight) top = -80;
+                line.style.top = top + 'px';
+            });
+
+            const playerRect = playerCar.getBoundingClientRect();
+            const pBox = { left: playerRect.left + 6, right: playerRect.right - 6, top: playerRect.top + 6, bottom: playerRect.bottom - 6 };
+
+            document.querySelectorAll('.enemy-car').forEach(enemy => {
+                let top = parseFloat(enemy.style.top) + parseFloat(enemy.dataset.speed);
+                enemy.style.top = top + 'px';
+
+                if (checkCollision(pBox, enemy.getBoundingClientRect())) {
+                    if (playerData.currentSkin === 'skin-tank' || playerData.currentSkin === 'skin-f1') {
+                        const enemyRect = enemy.getBoundingClientRect();
+                        const containerRect = container.getBoundingClientRect();
+                        triggerExplosion(enemyRect.left - containerRect.left, enemyRect.top - containerRect.top);
+                        
+                        enemy.remove();
+                        score += 25;
+                        runCoins += 5;
+                        scoreDisplay.innerText = score;
+                    } else {
+                        gameOver();
+                    }
+                }
+
+                if (top > container.clientHeight) {
+                    enemy.remove(); score += 10; runCoins += 2;
+                    scoreDisplay.innerText = score;
+                }
+            });
+        }
+        animationFrameId = requestAnimationFrame(gameLoop);
+    }
+
+    function openModeSelect() { mainMenu.classList.add('hidden'); modeMenu.classList.remove('hidden'); }
+    function selectMode(m) {
+        if (m === 'easy') { baseSpeed = 2.5; spawnRate = 1500; }
+        else if (m === 'normal') { baseSpeed = 4; spawnRate = 1100; }
+        else if (m === 'hard') { baseSpeed = 6.5; spawnRate = 700; }
+        modeMenu.classList.add('hidden'); startGame();
+    }
+
+    function startGame() {
+        mainMenu.classList.add('hidden'); modeMenu.classList.add('hidden');
+        gameOverMenu.classList.add('hidden'); settingsMenu.classList.add('hidden'); 
+        pauseMenu.classList.add('hidden'); document.getElementById('code-menu').classList.add('hidden');
+
+        document.querySelectorAll('.enemy-car').forEach(e => e.remove());
+        applySkin(playerData.currentSkin);
+
+        playerCar.style.left = (container.clientWidth / 2 - 25) + 'px';
+        playerCar.style.top = (container.clientHeight - 130) + 'px';
+
+        score = 0; runCoins = 0; scoreDisplay.innerText = score;
+        isPlaying = true; isPaused = false;
+
+        bgMusic.play().catch(e => {});
+
+        cancelAnimationFrame(animationFrameId);
+        clearInterval(spawnIntervalId); clearInterval(timerIntervalId);
+
+        gameLoop();
+        spawnIntervalId = setInterval(spawnEnemyCar, spawnRate);
+        timerIntervalId = setInterval(() => { if (isPlaying && !isPaused) playerData.playTimeSeconds++; }, 1000);
+    }
+
+    function togglePause() {
+        if (!isPlaying) return;
+        isPaused = !isPaused;
+        if (isPaused) {
+            bgMusic.pause();
+            pauseMenu.classList.remove('hidden');
+        } else {
+            bgMusic.play().catch(e => {});
+            pauseMenu.classList.add('hidden');
+        }
+    }
+
+    function showMainMenu() {
+        isPlaying = false;
+        isPaused = false;
+        bgMusic.pause();
+        cancelAnimationFrame(animationFrameId);
+        clearInterval(spawnIntervalId);
+        clearInterval(timerIntervalId);
+
+        document.querySelectorAll('.enemy-car').forEach(e => e.remove());
+
+        modeMenu.classList.add('hidden');
+        garageMenu.classList.add('hidden');
+        missionsMenu.classList.add('hidden');
+        settingsMenu.classList.add('hidden');
+        pauseMenu.classList.add('hidden');
+        gameOverMenu.classList.add('hidden');
+        document.getElementById('code-menu').classList.add('hidden');
+
+        mainMenu.classList.remove('hidden');
+        updateHUD();
+    }
+
+    function gameOver() {
+        isPlaying = false;
+        bgMusic.pause();
+        cancelAnimationFrame(animationFrameId);
+        clearInterval(spawnIntervalId);
+        clearInterval(timerIntervalId);
+
+        playerData.coins += runCoins;
+        if (score > playerData.highScore) {
+            playerData.highScore = score;
+        }
+        saveData();
+
+        finalScoreDisplay.innerText = score;
+        earnedCoinsDisplay.innerText = runCoins;
+        gameOverMenu.classList.remove('hidden');
+    }
+
+    function openSettings() {
+        mainMenu.classList.add('hidden');
+        settingsMenu.classList.remove('hidden');
+    }
+
+    function openSettingsFromPause() {
+        cameFromPause = true;
+        pauseMenu.classList.add('hidden');
+        settingsMenu.classList.remove('hidden');
+    }
+
+    function closeSettings() {
+        settingsMenu.classList.add('hidden');
+        if (cameFromPause) {
+            cameFromPause = false;
+            pauseMenu.classList.remove('hidden');
+        } else {
+            showMainMenu();
+        }
+    }
+
+    function changeSong(key) {
+        if (songList[key]) {
+            bgMusic.src = songList[key];
+            if (isPlaying && !isPaused) {
+                bgMusic.play().catch(e => {});
+            }
+        }
+    }
+
+    function updateVolume(val) {
+        bgMusic.volume = val / 100;
+    }
+
+    updateHUD();
+    applySkin(playerData.currentSkin);
+</script>
+</body>
+</html>

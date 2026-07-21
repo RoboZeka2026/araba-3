@@ -27,12 +27,12 @@
             width: 100%;
             max-width: 440px;
             height: 100vh;
-            background: #2b2b2b;
+            background: #111;
             box-shadow: 0 0 40px rgba(0,0,0,0.9);
             overflow: hidden;
         }
 
-        /* DAHA GERÇEKÇİ YOL TASARIMI (Yaya Geçidi ve Şeritler) */
+        /* GERÇEKÇİ ASFALT YOL (Sadece Orta Kesik Şeritler, Kenar Çizgileri Kaldırıldı) */
         .track {
             position: absolute;
             width: 100%;
@@ -40,39 +40,37 @@
             top: -100%;
             left: 0;
             background: 
-                /* Orta Kesik Şeritler */
+                /* Sadece Orta Kesik Şeritler */
                 repeating-linear-gradient(
                     0deg,
                     transparent,
                     transparent 40px,
-                    #ffffff 40px,
-                    #ffffff 80px
+                    #e0e0e0 40px,
+                    #e0e0e0 80px
                 ),
-                /* Yol Zemin Doku */
-                linear-gradient(90deg, #383838 0%, #444444 50%, #383838 100%);
-            background-size: 20px 100%, 100% 100%;
+                /* Derin Mat Siyah Asfalt Doku */
+                radial-gradient(circle, #222222 0%, #121212 100%);
+            background-size: 16px 100%, 100% 100%;
             background-position: center, center;
-            border-left: 12px solid #ffffff; /* Beyaz Yol Kenarı Çizgisi */
-            border-right: 12px solid #ffffff;
         }
 
-        /* Yaya Geçidi Katmanı */
+        /* Yaya Geçidi Katmanı (Nadiren ve Gerçekçi Görünüm) */
         .crosswalk {
             position: absolute;
             width: 100%;
-            height: 60px;
+            height: 50px;
             background: repeating-linear-gradient(
                 90deg,
-                #ffffff,
-                #ffffff 30px,
+                #f5f5f5,
+                #f5f5f5 30px,
                 transparent 30px,
                 transparent 55px
             );
-            opacity: 0.85;
+            opacity: 0.9;
             z-index: 2;
         }
 
-        /* GERÇEKÇİ 3B ÜSTTEN BAKARAK GÖRÜNEN ARABA */
+        /* 3B ÜSTTEN BAKARAK GÖRÜNEN ARABA */
         .car {
             position: absolute;
             width: 48px;
@@ -108,7 +106,7 @@
         #player-car { cursor: grab; z-index: 10; }
         #player-car:active { cursor: grabbing; }
 
-        /* GERÇEKÇİ ARKADAN KOŞAN KÖPEK VEYA İNSAN (CSS Çizimi - Emoji Yok) */
+        /* ARKADAN KOŞAN KÖPEK VEYA İNSAN */
         .chaser {
             position: absolute;
             width: 30px;
@@ -149,7 +147,7 @@
             border-radius: 50%;
         }
 
-        /* EKRANDA SABİT KALAN VEYA GEÇİCİ GÖRÜNEN HAKARET BALONU */
+        /* HAKARET BALONU */
         .speech-bubble {
             position: absolute;
             background: #ffffff;
@@ -357,7 +355,7 @@
 
 <div id="game-container">
     <div class="track" id="track"></div>
-    <div class="crosswalk" id="crosswalk" style="top: -150px;"></div>
+    <div class="crosswalk" id="crosswalk" style="top: -600px;"></div>
 
     <div id="top-bar">
         <div class="hud-box">SKOR: <span id="score">0</span></div>
@@ -373,7 +371,6 @@
         <p style="color:#ffd700; margin-bottom:10px; font-family:sans-serif;">🪙 Bakiyen: <span id="menu-coins">0</span></p>
 
         <button class="btn" onclick="openModeSelect()">OYUNA BAŞLA</button>
-        <button class="btn btn-drift" onclick="startPureDriftMode()">🌀 SERBEST DRIFT MODU</button>
         <button class="btn btn-secondary" onclick="openGarage()">🏎️ GARAJ (SKINLER)</button>
         <button class="btn btn-secondary" onclick="openMissions()">🎯 GÖREVLER</button>
         <button class="btn btn-code" onclick="openCodeMenu()">🎁 PROMO KOD GİR</button>
@@ -392,12 +389,13 @@
         <button class="btn btn-secondary" onclick="showMainMenu()">GERİ</button>
     </div>
 
-    <!-- Mod Seçim Menüsü -->
+    <!-- Mod Seçim Menüsü (Serbest Drift Modu Buraya Taşındı) -->
     <div id="mode-menu" class="overlay hidden">
         <h1>MOD SEÇ</h1>
         <button class="btn" onclick="selectMode('easy')">MAHALLE TURU (KOLAY)</button>
         <button class="btn" onclick="selectMode('normal')">KLASİK SOKAK (NORMAL)</button>
         <button class="btn" onclick="selectMode('hard')">ÇILGIN DRIFT (ZOR)</button>
+        <button class="btn btn-drift" onclick="startPureDriftMode()">🌀 SERBEST DRIFT MODU</button>
         <button class="btn btn-secondary" onclick="showMainMenu()">GERİ</button>
     </div>
 
@@ -450,7 +448,7 @@
         <button class="btn btn-secondary" onclick="showMainMenu()">ANA MENÜ</button>
     </div>
 
-    <!-- Game Over Menüsü (Hakaret Yazısı Ekranda Kalacak Şekilde Güncellendi) -->
+    <!-- Game Over Menüsü -->
     <div id="game-over-menu" class="overlay hidden">
         <h1 style="color: #ff1744;">KAZA YAPTIN!</h1>
         <p style="font-size: 18px; font-family:sans-serif;">Skorun: <span id="final-score">0</span></p>
@@ -709,7 +707,6 @@
 
         let deltaX = x - lastX;
         
-        // SERBEST DRIFT MODU İÇİN AÇILARI VE DUMANI 3 KAT DAHA FAZLA YAPTIK
         let angleMultiplier = isPureDriftMode ? 6 : 2;
         let smokeChance = isPureDriftMode ? 0.9 : 0.4;
         let maxAngle = isPureDriftMode ? 75 : 30;
@@ -719,7 +716,7 @@
         if (Math.abs(deltaX) > 2 && Math.random() < smokeChance) {
             spawnDriftSmoke(x + 24, y + 80);
             if (isPureDriftMode) {
-                score += 1; // Serbest drift modunda yanladıkça puan artar
+                score += 1;
                 runCoins += 0.5;
                 scoreDisplay.innerText = Math.floor(score);
             }
@@ -810,7 +807,7 @@
     }
 
     let trackY = 0;
-    let crosswalkY = -200;
+    let crosswalkY = -600;
 
     function gameLoop() {
         if (isPlaying && !isPaused) {
@@ -818,10 +815,10 @@
             if (trackY >= 80) trackY = 0;
             document.getElementById('track').style.backgroundPositionY = trackY + 'px';
 
-            // Yaya Geçidini Hareket Ettir
+            // Yaya Geçidini Seyrek Hale Getirdik (Arada bir uzun mesafelerle gelir)
             crosswalkY += baseSpeed + 2;
-            if (crosswalkY > container.clientHeight + 100) {
-                crosswalkY = -300 - Math.random() * 400;
+            if (crosswalkY > container.clientHeight + 200) {
+                crosswalkY = -800 - Math.random() * 600;
             }
             document.getElementById('crosswalk').style.top = crosswalkY + 'px';
 
@@ -854,7 +851,6 @@
                             hasCollided = true;
                             const randomInsult = insultList[Math.floor(Math.random() * insultList.length)];
                             
-                            // Adam hakareti ekrana yazar ve orada kalır, hemen arkasından game over ekranı açılır
                             showPermanentSpeechBubble(randomInsult);
                             
                             setTimeout(() => {
@@ -886,7 +882,7 @@
     function startPureDriftMode() {
         isPureDriftMode = true;
         baseSpeed = 3;
-        mainMenu.classList.add('hidden');
+        modeMenu.classList.add('hidden');
         startGame();
     }
 

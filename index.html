@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Çılgın Yarış - Pro 3D Car Edition</title>
+    <title>Çılgın Yarış - Gerçekçi 3D Drift Edition</title>
     <style>
         * {
             box-sizing: border-box;
@@ -27,106 +27,154 @@
             width: 100%;
             max-width: 440px;
             height: 100vh;
-            background: #222;
-            border-left: 14px solid #1b5e20;
-            border-right: 14px solid #1b5e20;
+            background: #111;
             box-shadow: 0 0 40px rgba(0,0,0,0.9);
             overflow: hidden;
-            perspective: 700px; /* Sadece alanın kendi derinliği */
+            perspective: 600px; /* Gerçekçi 3D üstten bakış alanı */
+        }
+
+        /* MAHALLE ARKAPLANI VE 3D YOL */
+        .track-scene {
+            position: absolute;
+            width: 100%;
+            height: 200%;
+            top: -50%;
+            left: 0;
+            transform-style: preserve-3d;
+            transform: rotateX(55deg) translateZ(-50px);
+            transform-origin: center center;
         }
 
         .track {
             position: absolute;
             width: 100%;
             height: 100%;
-            background: repeating-linear-gradient(
-                0deg,
-                #282828,
-                #282828 40px,
-                #222222 40px,
-                #222222 80px
-            );
+            /* Arka planda mahalle dokusu / asfalt */
+            background: linear-gradient(180deg, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.8) 100%), 
+                        repeating-linear-gradient(0deg, #333, #333 60px, #222 60px, #222 120px);
+            border-left: 10px dashed #fff;
+            border-right: 10px dashed #fff;
         }
+
+        /* Mahalle Yan Görselleri (Binalar / Sokak Detayları) */
+        .neighborhood-bg {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-image: radial-gradient(circle, rgba(255,165,0,0.15) 10%, transparent 80%),
+                              linear-gradient(90deg, #1b1b1b 0%, transparent 15%, transparent 85%, #1b1b1b 100%);
+            z-index: 1;
+            pointer-events: none;
+        }
+
         .lane-line {
             position: absolute;
-            width: 8px;
-            height: 60px;
-            background-color: #fff;
-            border-radius: 4px;
-            box-shadow: 0 0 8px rgba(255,255,255,0.4);
+            width: 6px;
+            height: 50px;
+            background-color: #fbc02d;
+            left: 50%;
+            transform: translateX(-50%);
         }
-        .lane-1 { left: 33%; }
-        .lane-2 { left: 66%; }
 
-        /* ARABALARI PRO 3D GÖRÜNÜME ÇEVİREN KISIM */
+        /* GERÇEKÇİ 3D ARABA MODELİ (Üstten / Kuşbakışı 3D) */
         .car {
             position: absolute;
-            width: 52px;
-            height: 94px;
-            border-radius: 14px;
-            box-shadow: 0 15px 25px rgba(0,0,0,0.8), inset 0 3px 6px rgba(255,255,255,0.4);
-            z-index: 5;
+            width: 54px;
+            height: 100px;
+            z-index: 10;
             transform-style: preserve-3d;
-            transform: rotateX(22deg) rotateY(0deg);
-            transition: transform 0.1s ease;
-        }
-        /* Ön Cam (3D Etki) */
-        .car::before {
-            content: '';
-            position: absolute;
-            top: 16px;
-            left: 6px;
-            width: 40px;
-            height: 24px;
-            background: linear-gradient(180deg, #111 0%, #333 100%);
-            border-radius: 6px;
-            border: 1px solid rgba(255,255,255,0.15);
-        }
-        /* Arka Cam / Bagaj Detayı */
-        .car::after {
-            content: '';
-            position: absolute;
-            bottom: 12px;
-            left: 6px;
-            width: 40px;
-            height: 14px;
-            background: #111;
-            border-radius: 4px;
+            transition: transform 0.05s ease-out;
+            will-change: left, top, transform;
         }
 
-        #player-car { cursor: grab; z-index: 10; }
+        /* Araba Gövdesi ve Detaylı 3D Kaporta */
+        .car-body {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 12px;
+            box-shadow: 0 20px 30px rgba(0,0,0,0.8), inset 0 4px 8px rgba(255,255,255,0.4);
+            transform: translateZ(15px);
+        }
+
+        /* Ön Cam & Tavan */
+        .car-roof {
+            position: absolute;
+            top: 25px;
+            left: 6px;
+            width: 42px;
+            height: 48px;
+            background: linear-gradient(180deg, #111 0%, #222 50%, #111 100%);
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.2);
+            transform: translateZ(22px);
+        }
+
+        /* Farlar */
+        .car-light-left, .car-light-right {
+            position: absolute;
+            top: 2px;
+            width: 10px;
+            height: 6px;
+            background: #fff;
+            border-radius: 3px;
+            box-shadow: 0 0 10px #fff;
+            transform: translateZ(20px);
+        }
+        .car-light-left { left: 6px; }
+        .car-light-right { right: 6px; }
+
+        /* Tekerlekler (Gerçekçi 3D Derinlik) */
+        .wheel {
+            position: absolute;
+            width: 12px;
+            height: 24px;
+            background: #000;
+            border-radius: 4px;
+            border: 1px solid #444;
+            transform: translateZ(8px);
+        }
+        .wheel-fl { top: 15px; left: -5px; }
+        .wheel-fr { top: 15px; right: -5px; }
+        .wheel-rl { bottom: 15px; left: -5px; }
+        .wheel-rr { bottom: 15px; right: -5px; }
+
+        /* Drift Dumanı Efekti */
+        .drift-smoke {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background: rgba(255, 255, 255, 0.6);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 5;
+            animation: smokeAnim 0.4s ease-out forwards;
+        }
+        @keyframes smokeAnim {
+            0% { transform: scale(0.5); opacity: 0.8; }
+            100% { transform: scale(2); opacity: 0; }
+        }
+
+        #player-car { z-index: 20; cursor: grab; }
         #player-car:active { cursor: grabbing; }
 
-        /* SKİNLER (BOZULMADI) */
-        .skin-red { background: linear-gradient(180deg, #ff1744 0%, #b71c1c 100%); border: 2px solid #ff5252; }
-        .skin-neon { background: linear-gradient(180deg, #00e676 0%, #1b5e20 100%); border: 2px solid #69f0ae; box-shadow: 0 0 15px #00e676 !important; }
-        .skin-gold { background: linear-gradient(180deg, #ffd700 0%, #ff8f00 100%); border: 2px solid #ffe57f; box-shadow: 0 0 15px #ffd700 !important; }
-        .skin-shadow { background: linear-gradient(180deg, #37474f 0%, #212121 100%); border: 2px solid #78909c; }
-        .skin-tank { background: linear-gradient(180deg, #000 0%, #d50000 100%); border: 3px solid #ff1744; box-shadow: 0 0 20px #ff1744 !important; }
-        
-        .skin-blue { background: linear-gradient(180deg, #00d2ff 0%, #3a7bd5 100%); border: 2px solid #80d8ff; }
-        .skin-purple { background: linear-gradient(180deg, #8e2de2 0%, #4a00e0 100%); border: 2px solid #b388ff; }
-        .skin-poison { background: linear-gradient(180deg, #76b852 0%, #8dc26f 100%); border: 2px solid #ccff90; }
-        .skin-fire { background: linear-gradient(180deg, #ff4e50 0%, #f9d423 100%); border: 2px solid #ff6e40; }
-        .skin-cop { background: linear-gradient(180deg, #000 0%, #1a237e 100%); border: 2px solid #ff1744; box-shadow: 0 0 12px #29b6f6 !important; }
-        .skin-camo { background: linear-gradient(180deg, #4ac29a 0%, #bdfff3 100%); border: 2px solid #a7ffeb; }
-        .skin-diamond { background: linear-gradient(180deg, #e0eafc 0%, #cfdef3 100%); border: 2px solid #fff; box-shadow: 0 0 15px #fff !important; }
-        .skin-lava { background: linear-gradient(180deg, #f83600 0%, #fe8c00 100%); border: 2px solid #ffab40; }
-        .skin-rgb { background: linear-gradient(45deg, #ff0000, #00ff00, #0000ff); border: 2px solid #fff; animation: rgbAnim 2s infinite linear; }
-        .skin-f1 { background: linear-gradient(180deg, #000000 0%, #ffeb3b 100%); border: 3px solid #000; box-shadow: 0 0 25px #ffeb3b !important; }
+        /* SKİNLER (Renkler ve Özel Efektler) */
+        .skin-red .car-body { background: linear-gradient(180deg, #ff1744 0%, #b71c1c 100%); border: 2px solid #ff5252; }
+        .skin-neon .car-body { background: linear-gradient(180deg, #00e676 0%, #1b5e20 100%); border: 2px solid #69f0ae; box-shadow: 0 0 15px #00e676; }
+        .skin-gold .car-body { background: linear-gradient(180deg, #ffd700 0%, #ff8f00 100%); border: 2px solid #ffe57f; box-shadow: 0 0 15px #ffd700; }
+        .skin-shadow .car-body { background: linear-gradient(180deg, #37474f 0%, #212121 100%); border: 2px solid #78909c; }
+        .skin-tank .car-body { background: linear-gradient(180deg, #000 0%, #d50000 100%); border: 3px solid #ff1744; box-shadow: 0 0 20px #ff1744; }
+        .skin-blue .car-body { background: linear-gradient(180deg, #00d2ff 0%, #3a7bd5 100%); border: 2px solid #80d8ff; }
+        .skin-purple .car-body { background: linear-gradient(180deg, #8e2de2 0%, #4a00e0 100%); border: 2px solid #b388ff; }
+        .skin-poison .car-body { background: linear-gradient(180deg, #76b852 0%, #8dc26f 100%); border: 2px solid #ccff90; }
+        .skin-fire .car-body { background: linear-gradient(180deg, #ff4e50 0%, #f9d423 100%); border: 2px solid #ff6e40; }
+        .skin-cop .car-body { background: linear-gradient(180deg, #000 0%, #1a237e 100%); border: 2px solid #ff1744; box-shadow: 0 0 12px #29b6f6; }
+        .skin-camo .car-body { background: linear-gradient(180deg, #4ac29a 0%, #bdfff3 100%); border: 2px solid #a7ffeb; }
+        .skin-diamond .car-body { background: linear-gradient(180deg, #e0eafc 0%, #cfdef3 100%); border: 2px solid #fff; box-shadow: 0 0 15px #fff; }
+        .skin-lava .car-body { background: linear-gradient(180deg, #f83600 0%, #fe8c00 100%); border: 2px solid #ffab40; }
+        .skin-rgb .car-body { background: linear-gradient(45deg, #ff0000, #00ff00, #0000ff); border: 2px solid #fff; animation: rgbAnim 2s infinite linear; }
+        .skin-f1 .car-body { background: linear-gradient(180deg, #000000 0%, #ffeb3b 100%); border: 3px solid #000; box-shadow: 0 0 25px #ffeb3b; }
 
         @keyframes rgbAnim { 0% { filter: hue-rotate(0deg); } 100% { filter: hue-rotate(360deg); } }
-
-        .spoiler {
-            position: absolute;
-            bottom: -6px;
-            left: 2px;
-            width: 48px;
-            height: 8px;
-            background: #111;
-            border-radius: 3px;
-            transform: translateZ(10px);
-        }
 
         .explosion {
             position: absolute;
@@ -157,7 +205,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            z-index: 20;
+            z-index: 30;
         }
         .hud-box {
             color: #fff;
@@ -185,10 +233,11 @@
             align-items: center;
         }
 
+        /* 2B/DÜZ MENÜLER (Kullanıcı isteği: Ana Menü 3D OLMASIN) */
         .overlay {
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.94);
+            background: rgba(10, 10, 10, 0.96);
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -265,21 +314,21 @@
             width: 100%; padding: 8px; background: #222; color: #fff;
             border: 1px solid #ff1744; border-radius: 8px; text-align: center;
         }
-
-        #error-overlay {
-            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-            background: #0000aa; color: #ffffff;
-            font-family: 'Courier New', Courier, monospace;
-            z-index: 99999; display: flex; flex-direction: column;
-            justify-content: center; align-items: center; padding: 40px;
-            box-sizing: border-box; text-align: left;
-        }
     </style>
 </head>
 <body onclick="enableFullScreen()">
 
 <div id="game-container">
-    <div class="track" id="track"></div>
+    <!-- Mahalle Arka Planı ve 3D Yol Sahnesi -->
+    <div class="track-scene" id="track-scene">
+        <div class="neighborhood-bg"></div>
+        <div class="track" id="track">
+            <div class="lane-line" style="top: 0%;"></div>
+            <div class="lane-line" style="top: 25%;"></div>
+            <div class="lane-line" style="top: 50%;"></div>
+            <div class="lane-line" style="top: 75%;"></div>
+        </div>
+    </div>
 
     <div id="top-bar">
         <div class="hud-box">SKOR: <span id="score">0</span></div>
@@ -287,11 +336,21 @@
         <button id="pause-btn" onclick="togglePause()">⏸</button>
     </div>
 
-    <div id="player-car" class="car skin-red"><div class="spoiler"></div></div>
+    <!-- Oyuncu 3D Araba -->
+    <div id="player-car" class="car skin-red">
+        <div class="wheel wheel-fl"></div>
+        <div class="wheel wheel-fr"></div>
+        <div class="wheel wheel-rl"></div>
+        <div class="wheel wheel-rr"></div>
+        <div class="car-light-left"></div>
+        <div class="car-light-right"></div>
+        <div class="car-roof"></div>
+        <div class="car-body"></div>
+    </div>
 
-    <!-- Ana Menü -->
+    <!-- Ana Menü (Tamamen Düz / 2D) -->
     <div id="main-menu" class="overlay">
-        <h1>ÇILGIN YARIŞ</h1>
+        <h1>MAHALLE YARIŞI</h1>
         <p style="color:#ffd700; margin-bottom:10px; font-family:sans-serif;">🪙 Bakiyen: <span id="menu-coins">0</span></p>
 
         <button class="btn" onclick="openModeSelect()">OYUNA BAŞLA</button>
@@ -316,9 +375,9 @@
     <!-- Mod Seçim Menüsü -->
     <div id="mode-menu" class="overlay hidden">
         <h1>MOD SEÇ</h1>
-        <button class="btn" onclick="selectMode('easy')">SONSUZ OTOBAN (KOLAY)</button>
-        <button class="btn" onclick="selectMode('normal')">KLASİK MOD (NORMAL)</button>
-        <button class="btn" onclick="selectMode('hard')">ÇILGIN TRAFİK (ZOR)</button>
+        <button class="btn" onclick="selectMode('easy')">MAHALLE TURU (KOLAY)</button>
+        <button class="btn" onclick="selectMode('normal')">KLASİK SOKAK (NORMAL)</button>
+        <button class="btn" onclick="selectMode('hard')">ÇILGIN DRIFT (ZOR)</button>
         <button class="btn btn-secondary" onclick="showMainMenu()">GERİ</button>
     </div>
 
@@ -381,15 +440,6 @@
     </div>
 </div>
 
-<div id="error-overlay" class="hidden">
-    <h2 style="color:#ff3333; font-size:24px;">*** FATAL SYSTEM ERROR ***</h2>
-    <p>A critical exception F2_KEY_TRIGGERED has occurred at 0x0040F220.</p>
-    <p>System memory dumped. Game thread terminated immediately.</p>
-    <br>
-    <p>* Press any key to restart game environment.</p>
-    <p>* System auto-rebooting in <span id="error-timer">5</span> seconds...</p>
-</div>
-
 <audio id="bg-music" loop></audio>
 
 <script>
@@ -399,26 +449,6 @@
             if (elem.requestFullscreen) { elem.requestFullscreen(); }
             else if (elem.webkitRequestFullscreen) { elem.webkitRequestFullscreen(); }
         }
-    }
-
-    window.addEventListener('keydown', function(e) {
-        if (e.key === 'F2') {
-            e.preventDefault();
-            triggerCustomError();
-        }
-    });
-
-    function triggerCustomError() {
-        const errorView = document.getElementById('error-overlay');
-        errorView.classList.remove('hidden');
-        bgMusic.pause();
-        let countdown = 5;
-        const timerTxt = document.getElementById('error-timer');
-        const interval = setInterval(() => {
-            countdown--;
-            timerTxt.innerText = countdown;
-            if (countdown <= 0) { clearInterval(interval); location.reload(); }
-        }, 1000);
     }
 
     let playerData = JSON.parse(localStorage.getItem('raceGameData')) || {
@@ -537,6 +567,7 @@
     let cameFromPause = false;
     let baseSpeed = 4, spawnRate = 1100;
     let isDragging = false, offsetX = 0, offsetY = 0;
+    let lastX = 0, currentDriftAngle = 0;
 
     const songList = {
         song1: "https://cdn.pixabay.com/download/audio/2022/03/15/audio_c8c8a73229.mp3",
@@ -613,17 +644,6 @@
         saveData(); openMissions();
     }
 
-    const lines = [];
-    for (let lane = 1; lane <= 2; lane++) {
-        for (let i = 0; i < 6; i++) {
-            const line = document.createElement('div');
-            line.className = `lane-line lane-${lane}`;
-            line.style.top = (i * 120) + 'px';
-            container.appendChild(line);
-            lines.push(line);
-        }
-    }
-
     playerCar.addEventListener('mousedown', startDrag);
     playerCar.addEventListener('touchstart', startDrag, { passive: false });
 
@@ -641,7 +661,6 @@
         window.addEventListener('touchend', stopDrag);
     }
 
-    let lastX = 0;
     function drag(e) {
         if (!isDragging || !isPlaying || isPaused) return;
         e.preventDefault();
@@ -652,21 +671,37 @@
         let x = clientX - containerRect.left - offsetX;
         let y = clientY - containerRect.top - offsetY;
 
-        // Sola sağa hareket ederken hafif 3D yatma efekti (Dönüş hissi)
+        // Drift Efekti ve Açı Hesaplama
         let deltaX = x - lastX;
-        let tilt = Math.max(-15, Math.min(15, deltaX * 1.5));
-        playerCar.style.transform = `rotateX(22deg) rotateY(${tilt}deg)`;
-        lastX = x;
+        currentDriftAngle = Math.max(-35, Math.min(35, deltaX * 2.5));
 
+        // Sağa veya sola çok kaydırıldığında drift dumanı çıkar
+        if (Math.abs(deltaX) > 6 && Math.random() < 0.4) {
+            spawnDriftSmoke(x + 27, y + 80);
+        }
+
+        lastX = x;
         x = Math.max(0, Math.min(x, container.clientWidth - playerCar.offsetWidth));
         y = Math.max(0, Math.min(y, container.clientHeight - playerCar.offsetHeight));
 
-        playerCar.style.left = x + 'px'; playerCar.style.top = y + 'px';
+        playerCar.style.left = x + 'px';
+        playerCar.style.top = y + 'px';
+        playerCar.style.transform = `rotateZ(${currentDriftAngle}deg)`;
     }
 
     function stopDrag() { 
         isDragging = false; 
-        playerCar.style.transform = `rotateX(22deg) rotateY(0deg)`;
+        currentDriftAngle = 0;
+        playerCar.style.transform = `rotateZ(0deg)`;
+    }
+
+    function spawnDriftSmoke(x, y) {
+        const smoke = document.createElement('div');
+        smoke.className = 'drift-smoke';
+        smoke.style.left = x + 'px';
+        smoke.style.top = y + 'px';
+        container.appendChild(smoke);
+        setTimeout(() => smoke.remove(), 400);
     }
 
     const carColors = ['linear-gradient(180deg, #29b6f6 0%, #0288d1 100%)', 'linear-gradient(180deg, #ab47bc 0%, #7b1fa2 100%)', 'linear-gradient(180deg, #ffee58 0%, #fbc02d 100%)'];
@@ -675,9 +710,21 @@
         if (!isPlaying || isPaused) return;
         const enemy = document.createElement('div');
         enemy.className = 'car enemy-car';
-        enemy.style.background = carColors[Math.floor(Math.random() * carColors.length)];
-        enemy.style.left = Math.floor(Math.random() * (container.clientWidth - 50)) + 'px';
-        enemy.style.top = '-110px';
+        
+        // Düşman arabaya 3D parça yapısı ekle
+        enemy.innerHTML = `
+            <div class="wheel wheel-fl"></div>
+            <div class="wheel wheel-fr"></div>
+            <div class="wheel wheel-rl"></div>
+            <div class="wheel wheel-rr"></div>
+            <div class="car-light-left"></div>
+            <div class="car-light-right"></div>
+            <div class="car-roof"></div>
+            <div class="car-body" style="background: ${carColors[Math.floor(Math.random() * carColors.length)]}"></div>
+        `;
+
+        enemy.style.left = Math.floor(Math.random() * (container.clientWidth - 60)) + 'px';
+        enemy.style.top = '-140px';
         enemy.dataset.speed = (Math.random() * 2 + baseSpeed + (score / 200)).toFixed(1);
         container.appendChild(enemy);
     }
@@ -696,16 +743,16 @@
         setTimeout(() => exp.remove(), 400);
     }
 
+    let trackY = 0;
     function gameLoop() {
         if (isPlaying && !isPaused) {
-            lines.forEach(line => {
-                let top = parseFloat(line.style.top) + baseSpeed + 3;
-                if (top > container.clientHeight) top = -80;
-                line.style.top = top + 'px';
-            });
+            // Arka plan mahalle ve yol akışı
+            trackY += baseSpeed + 2;
+            if (trackY >= 100) trackY = 0;
+            document.getElementById('track').style.backgroundPositionY = trackY + 'px';
 
             const playerRect = playerCar.getBoundingClientRect();
-            const pBox = { left: playerRect.left + 6, right: playerRect.right - 6, top: playerRect.top + 6, bottom: playerRect.bottom - 6 };
+            const pBox = { left: playerRect.left + 8, right: playerRect.right - 8, top: playerRect.top + 8, bottom: playerRect.bottom - 8 };
 
             document.querySelectorAll('.enemy-car').forEach(enemy => {
                 let top = parseFloat(enemy.style.top) + parseFloat(enemy.dataset.speed);
@@ -751,8 +798,8 @@
         document.querySelectorAll('.enemy-car').forEach(e => e.remove());
         applySkin(playerData.currentSkin);
 
-        playerCar.style.left = (container.clientWidth / 2 - 25) + 'px';
-        playerCar.style.top = (container.clientHeight - 130) + 'px';
+        playerCar.style.left = (container.clientWidth / 2 - 27) + 'px';
+        playerCar.style.top = (container.clientHeight - 150) + 'px';
 
         score = 0; runCoins = 0; scoreDisplay.innerText = score;
         isPlaying = true; isPaused = false;

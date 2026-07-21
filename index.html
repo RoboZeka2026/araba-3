@@ -32,7 +32,7 @@
             overflow: hidden;
         }
 
-        /* GERÇEKÇİ ASFALT (Sadece Ortada Beyaz Kesik Çizgiler Var, Yan Çizgiler Tamamen Kaldırıldı) */
+        /* GERÇEKÇİ SİMSİLAH ASFALT YOL (Sadece Ortada Beyaz Kesik Şeritler, Kenar Çizgileri Yok) */
         .track {
             position: absolute;
             width: 100%;
@@ -48,8 +48,8 @@
                     #e0e0e0 40px,
                     #e0e0e0 80px
                 ),
-                /* Derin Mat Siyah Yerine Doğal Gri-Antrasit Asfalt Dokusu */
-                linear-gradient(90deg, #2a2a2a 0%, #333333 50%, #2a2a2a 100%);
+                /* İstediğin Gibi Simsiyah Asfalt Doku */
+                linear-gradient(90deg, #0a0a0a 0%, #111111 50%, #0a0a0a 100%);
             background-size: 16px 100%, 100% 100%;
             background-position: center, center;
         }
@@ -311,7 +311,7 @@
         .btn-code { background: linear-gradient(45deg, #29b6f6, #0288d1); border: 1px solid #80d8ff; }
         .btn-drift { background: linear-gradient(45deg, #8e2de2, #4a00e0); border: 1px solid #b388ff; }
 
-        /* Mobilde ve PC'de Garaj Kaydırma Düzeltmesi (touch-action eklendi) */
+        /* Mobilde ve PC'de Garaj Kaydırma Düzeltmesi */
         .skin-list, .mission-list {
             width: 100%;
             max-width: 340px;
@@ -368,7 +368,7 @@
 
     <div id="player-car" class="car skin-red" style="display: none;"></div>
 
-    <!-- Ana Menü (Arka plan düz siyah yapıldı, yol ve arabalar kaldırıldı) -->
+    <!-- Ana Menü -->
     <div id="main-menu" class="overlay" style="background: #0d0d0d;">
         <h1>MAHALLE YARIŞI</h1>
         <p style="color:#ffd700; margin-bottom:10px; font-family:sans-serif;">🪙 Bakiyen: <span id="menu-coins">0</span></p>
@@ -899,7 +899,7 @@
         hasCollided = false;
         applySkin(playerData.currentSkin);
 
-        playerCar.style.display = 'block'; // Oyuna başlayınca araba görünür olur
+        playerCar.style.display = 'block';
         playerCar.style.left = (container.clientWidth / 2 - 24) + 'px';
         playerCar.style.top = (container.clientHeight - 130) + 'px';
 
@@ -941,7 +941,7 @@
         document.querySelectorAll('.enemy-car').forEach(e => e.remove());
         if (activeChaser) { activeChaser.remove(); activeChaser = null; }
         if (activeSpeechBubble) { activeSpeechBubble.remove(); activeSpeechBubble = null; }
-        playerCar.style.display = 'none'; // Ana menüde araba gizlenir
+        playerCar.style.display = 'none';
 
         modeMenu.classList.add('hidden');
         garageMenu.classList.add('hidden');
@@ -970,7 +970,7 @@
 
         finalScoreDisplay.innerText = Math.floor(score);
         earnedCoinsDisplay.innerText = Math.floor(runCoins);
-        gameOverMenu.classList.remove('hidden');
+        gameOverMenu.classList.add('hidden');
     }
 
     function openSettings() {
@@ -1008,7 +1008,7 @@
     }
 
     updateHUD();
-    playerCar.style.display = 'none'; // Sayfa ilk açıldığında ana menüde araba görünmez
+    playerCar.style.display = 'none';
 </script>
 </body>
 </html>
